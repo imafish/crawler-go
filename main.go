@@ -10,12 +10,13 @@ import (
 )
 
 // Log is the global logger
-var Log Logger
+var logGlobal Logger
 
 func main() {
-	url := flag.String("u", "", "URL for the crawler to parse")
-	outDir := flag.String("d", "", "output directory for downloaded resources")
-	logPath := flag.String("-log", "", "log file path")
+	url := flag.String("u", "", "Manditory: URL for the crawler to parse")
+	outDir := flag.String("d", ".", "output directory for downloaded resources")
+	concurrent := flag.Int("-concurrent", 5, "concurrent count")
+	logPath := flag.String("-log", "out.log", "log file path")
 	flag.Parse()
 	if *url == "" || *outDir == "" {
 		usage()
@@ -24,6 +25,11 @@ func main() {
 
 	initLog(*logPath)
 
+	logGlobal.Info("starting crawler workflow...")
+	absDir := makeAbs(filepath.Dir(os.Args[0]), *outDir)
+	workflow(*url, absDir, *concurrent, logGlobal)
+
+	logGlobal.Info("ALL DONE.")
 }
 
 func initLog(logPath string) {
@@ -39,7 +45,17 @@ func initLog(logPath string) {
 	}
 
 	// TODO implement log
-	Log = nil
+	logGlobal = ConsoleLog(1)
+}
+
+// TODO (@imafish) move to separate file?
+func makeAbs(absolute, path string) string {
+	if filepath.IsAbs(path) {
+		return path
+	}
+
+	abs := filepath.Join(absolute, path)
+	return abs
 }
 
 func usage() {

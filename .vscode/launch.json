@@ -10,8 +10,13 @@
             "request": "launch",
             "mode": "auto",
             "program": "${fileDirname}",
-            "env": {},
-            "args": []
+            "env": {
+                "HTTP_PROXY": "192.168.31.2:7890"
+            },
+            "args": [
+                "-c",
+                "resources/example.yaml"
+            ]
         }
     ]
 }

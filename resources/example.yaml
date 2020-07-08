@@ -1,0 +1,26 @@
+starters:
+-   targets:
+        - http://www.888.html
+        - http://www.link66.html
+
+
+    start_group:
+        dir_pattern: "{pageTitle}"
+        group_mame: "{pageTitle}"
+        reset_counter: true
+rules:
+-   targets:
+    -   xpath: //*[@id="bigimg"]
+    action:
+        download_file:
+            target:
+                xpath: "@src"
+            dir_pattern: ""
+            filename_pattern: "{__i}{.ext}"
+-   targets:
+    -   xpath: /html/body/div[19]/ul/li/a
+    action:
+        process_link:
+            target:
+                xpath: "@href"
+            final: true

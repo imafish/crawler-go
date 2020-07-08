@@ -1,7 +1,10 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/antchfx/htmlquery"
+	"golang.org/x/net/html"
 )
 
 // PageParseTask holds information to parse a page
@@ -9,18 +12,16 @@ type PageParseTask struct {
 	url   string
 	final bool
 
-	// for name formatting
-	linkText string
+	gc groupContext
+}
+
+// URL returns the task's corresponding url
+func (t PageParseTask) URL() string {
+	return t.url
 }
 
 // Execute grab and analyse the page content, generates other related tasks.
 func (t PageParseTask) Execute(ctx *Context) error {
-	goon := ctx.startExecuting(t.url)
-	if !goon {
-		ctx.log.Debugf("task already exists, skipping. task: %#v", t)
-		return nil
-	}
-
 	reader, err := grabPageReader(t.url)
 	if err != nil {
 		ctx.log.Errorf("failed to grab page from url %s, err: %s", t.url, err.Error())
@@ -30,72 +31,142 @@ func (t PageParseTask) Execute(ctx *Context) error {
 	// analysis page content
 	doc, err := htmlquery.Parse(reader)
 
-	// add download file task to list:
-	downloads := htmlquery.Find(doc, `//*[@id="bigimg"]`)
-	for _, d := range downloads {
-		urlString := htmlquery.SelectAttr(d, "src")
-		url, err := convertToAbsoluteURL(t.url, urlString)
+	pageTitleNode := htmlquery.FindOne(doc, `/html/head/title`)
+	pageTitle := htmlquery.InnerText(pageTitleNode)
+
+	if t.gc.firstParse {
+		nc := &namingContext{
+			i:         t.gc.i,
+			pageTitle: pageTitle,
+		}
+		dir, err := formatString(t.gc.dir, nc, ctx)
 		if err != nil {
-			ctx.log.Errorf("failed to convert url %s to absolute", urlString)
+			ctx.log.Errorf("failed to parse dir string %s, err: %s", t.gc.dir, err.Error())
 			return err
 		}
-
-		// getting context for name formatting
-		pageTitleNode := htmlquery.FindOne(doc, `/html/head/title`)
-		pageTitle := htmlquery.InnerText(pageTitleNode)
-		imgAlt := htmlquery.SelectAttr(d, "alt")
-		linkText := t.linkText
-
-		task := DownloadFileTask{
-			url:             url,
-			dirPattern:      "img",
-			filenamePattern: `{__i}{.ext}`,
-
-			pageTitle: pageTitle,
-			imgAlt:    imgAlt,
-			linkText:  linkText,
-		}
-
-		ctx.addTask(task)
+		t.gc.dir = dir
+		t.gc.firstParse = false
 	}
 
-	// add links to task list:
-	if !t.final {
-		links := htmlquery.Find(doc, "/html/body/div[19]/ul/li/a")
-		for _, link := range links {
-			urlString := htmlquery.SelectAttr(link, "href")
-			if isInvalid(urlString) {
-				continue
-			}
-			url, err := convertToAbsoluteURL(t.url, urlString)
+	rules := ctx.config.Rules
+
+	for _, r := range rules {
+		for _, tgt := range r.Targets {
+			matchingNodes, err := getMatchingNodes(doc, tgt)
 			if err != nil {
+				ctx.log.Errorf("Unable to get matching nodes. err: %s", err.Error())
 				return err
 			}
+			for _, n := range matchingNodes {
+				ctx.log.Debugf("Find a matching node: %v", n)
+				if df := r.Action.DownloadFile; df != nil {
+					urlString, err := getOneNodeInnerText(n, df.Target)
+					if err != nil {
+						ctx.log.Errorf("Failed to get inner text of sub-target, err: %s", err.Error())
+						return err
+					}
+					urlString, err = convertToAbsoluteURL(t.url, urlString)
+					if err != nil {
+						ctx.log.Errorf("failed to convert url %s to absolute", urlString)
+						return err
+					}
 
-			linkText := htmlquery.InnerText(link)
+					ext, err := getExtension(urlString)
+					if err != nil {
+						ctx.log.Errorf("Cannot parse url in download file task, err: %s", err.Error())
+						return err
+					}
+					nc := &namingContext{
+						pageTitle: pageTitle,
+						imgAlt:    htmlquery.SelectAttr(n, "alt"),
+						text:      htmlquery.InnerText(n),
+						ext:       ext,
+						i:         t.gc.i,
+					}
 
-			task := PageParseTask{
-				url:   url,
-				final: true,
+					task := DownloadFileTask{
+						url:             urlString,
+						dirPattern:      t.gc.dir,
+						filenamePattern: df.FilenamePattern,
+						nc:              nc,
+					}
+					ctx.addTask(task)
+				}
 
-				linkText: linkText,
+				if r.Action.StartGroup != nil && !t.final {
+					ctx.log.Error("StartGroup is not supported yet.")
+					return fmt.Errorf("StartGroup is not supported yet")
+				}
+
+				if pl := r.Action.ProcessLink; pl != nil && !t.final {
+					urlString, err := getOneNodeInnerText(n, pl.Target)
+					if err != nil {
+						ctx.log.Errorf("Failed to get inner text of sub-target, err: %s", err.Error())
+						return err
+					}
+					if isInvalid(urlString) {
+						continue
+					}
+					urlString, err = convertToAbsoluteURL(t.url, urlString)
+					if err != nil {
+						ctx.log.Errorf("Unable to convert to absolute path, err: %s", err.Error())
+						return err
+					}
+
+					task := PageParseTask{
+						url:   urlString,
+						final: pl.Final,
+						gc:    t.gc,
+					}
+					ctx.addTask(task)
+				}
 			}
-			ctx.addTask(task)
 		}
-
 	}
-	return err
+
+	return nil
+}
+
+func getOneNodeInnerText(top *html.Node, t target) (string, error) {
+	var subNode *html.Node
+	switch {
+	case t.Xpath != "":
+		subNode = htmlquery.FindOne(top, t.Xpath)
+	default:
+		return "", fmt.Errorf("Unsupported target type: %#v", t)
+	}
+	if subNode == nil {
+		return "", nil
+	}
+	urlString := htmlquery.InnerText(subNode)
+
+	return urlString, nil
+}
+
+func getMatchingNodes(top *html.Node, t target) ([]*html.Node, error) {
+	var matchingNodes []*html.Node
+
+	switch {
+	case t.Xpath != "":
+		matchingNodes = htmlquery.Find(top, t.Xpath)
+	default:
+		return nil, fmt.Errorf("Unsupported target type: %#v", t)
+	}
+
+	return matchingNodes, nil
 }
 
 func isInvalid(url string) bool {
-	result := false
+	invalid := false
 
 	switch url {
 	case "#":
-		result = true
+		invalid = true
+	case "":
+		invalid = true
 	default:
-		result = false
+		invalid = false
 	}
 
-	return result
+	return invalid
 }

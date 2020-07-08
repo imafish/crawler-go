@@ -16,21 +16,24 @@ type DownloadFileTask struct {
 	dirPattern      string
 
 	// context for filename pattern
-	pageTitle string
-	imgAlt    string
-	linkText  string
+	nc *namingContext
 
 	filter interface{} // TODO (@imafish) placeholder here. implement filter feature later.
 }
 
+// URL returns the task's corresponding url
+func (t DownloadFileTask) URL() string {
+	return t.url
+}
+
 // Execute downloads the file from url and save it to disk
 func (t DownloadFileTask) Execute(ctx *Context) error {
-	dirFormatted, err := formatString(t.dirPattern, t, ctx)
+	dirFormatted, err := formatString(t.dirPattern, t.nc, ctx)
 	if err != nil {
 		ctx.log.Errorf("Failed to format dirPattern, err: %s", err.Error())
 		return err
 	}
-	filenameFormatted, err := formatString(t.filenamePattern, t, ctx)
+	filenameFormatted, err := formatString(t.filenamePattern, t.nc, ctx)
 	if err != nil {
 		ctx.log.Errorf("Failed to format filenamePattern, err: %s", err.Error())
 		return err
@@ -51,25 +54,16 @@ func (t DownloadFileTask) Execute(ctx *Context) error {
 	return nil
 }
 
-func formatString(pattern string, t DownloadFileTask, ctx *Context) (string, error) {
-	pattern = strings.ReplaceAll(pattern, "{pageTitle}", t.pageTitle)
-	pattern = strings.ReplaceAll(pattern, "{imgAlt}", t.imgAlt)
-	pattern = strings.ReplaceAll(pattern, "{linkText}", t.linkText)
-
-	// file extension
-	url, err := url.Parse(t.url)
-	if err != nil {
-		ctx.log.Errorf("Cannot parse url in download file task, err: %s", err.Error())
-		return "", err
-	}
-	path := url.EscapedPath()
-	ext := filepath.Ext(path)
-	pattern = strings.ReplaceAll(pattern, "{.ext}", ext)
+func formatString(pattern string, nc *namingContext, ctx *Context) (string, error) {
+	pattern = strings.ReplaceAll(pattern, "{pageTitle}", nc.pageTitle)
+	pattern = strings.ReplaceAll(pattern, "{imgAlt}", nc.imgAlt)
+	pattern = strings.ReplaceAll(pattern, "{linkText}", nc.text)
+	pattern = strings.ReplaceAll(pattern, "{.ext}", nc.ext)
 
 	// counter
 	counterPattern := regexp.MustCompile(`\{_*i\}`)
 	if counterPattern.MatchString(pattern) {
-		i := <-ctx.counter
+		i := <-nc.i.i
 		iString := strconv.Itoa(i)
 		iLength := len(iString)
 
@@ -85,4 +79,16 @@ func formatString(pattern string, t DownloadFileTask, ctx *Context) (string, err
 	}
 
 	return pattern, nil
+}
+
+func getExtension(urlString string) (string, error) {
+	// file extension
+	u, err := url.Parse(urlString)
+	if err != nil {
+		return "", err
+	}
+	path := u.EscapedPath()
+	ext := filepath.Ext(path)
+
+	return ext, nil
 }

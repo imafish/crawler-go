@@ -9,29 +9,16 @@ type Context struct {
 	taskChan chan Task
 	quitChan chan bool
 	wait     sync.WaitGroup
-	counter  chan int
 
 	// application configurations:
 	goroutineCount int
 	outDir         string
+	config         *configuration
 	log            Logger
 
 	mtx          sync.Mutex // mutex to protect task control data. protects the following variable
 	linkMap      map[string]bool
 	pendingCount int
-}
-
-func (ctx *Context) startExecuting(url string) bool {
-	ctx.mtx.Lock()
-	defer ctx.mtx.Unlock()
-
-	_, ok := ctx.linkMap[url]
-	if ok {
-		return false
-	}
-
-	ctx.linkMap[url] = false
-	return true
 }
 
 func (ctx *Context) finishExecuting() {
@@ -50,10 +37,15 @@ func (ctx *Context) finishExecuting() {
 }
 
 func (ctx *Context) addTask(task Task) {
-	ctx.taskChan <- task
-	ctx.log.Debugf("added task to queue: %#v", task)
+	u := task.URL()
 
 	ctx.mtx.Lock()
 	defer ctx.mtx.Unlock()
-	ctx.pendingCount++
+	if _, ok := ctx.linkMap[u]; !ok {
+		// task does not exist.
+		ctx.linkMap[u] = false
+		ctx.taskChan <- task
+		ctx.pendingCount++
+		ctx.log.Debugf("added task to queue: %#v", task)
+	}
 }

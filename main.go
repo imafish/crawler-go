@@ -13,12 +13,12 @@ import (
 var logGlobal Logger
 
 func main() {
-	url := flag.String("u", "", "Manditory: URL for the crawler to parse")
+	configFile := flag.String("c", "", "Manditory: path to the configuration yaml file")
 	outDir := flag.String("d", ".", "output directory for downloaded resources")
 	concurrent := flag.Int("-concurrent", 5, "concurrent count")
 	logPath := flag.String("-log", "out.log", "log file path")
 	flag.Parse()
-	if *url == "" || *outDir == "" {
+	if *configFile == "" {
 		usage()
 		os.Exit(1)
 	}
@@ -27,7 +27,7 @@ func main() {
 
 	logGlobal.Info("starting crawler workflow...")
 	absDir := makeAbs(filepath.Dir(os.Args[0]), *outDir)
-	workflow(*url, absDir, *concurrent, logGlobal)
+	workflow(*configFile, absDir, *concurrent, logGlobal)
 
 	logGlobal.Info("ALL DONE.")
 }

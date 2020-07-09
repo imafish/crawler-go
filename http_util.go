@@ -16,10 +16,14 @@ func downloadFile(url, destination string) error {
 
 	resp, err := http.Get(url)
 	if err != nil {
-		logGlobal.Errorf("Failed to complete request. err: %s", err.Error())
+		logGlobal.Errorf("Failed to complete request GET %s. err: %s", url, err.Error())
 		return err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("Request GET %s got unexpected http status code: %d", url, resp.StatusCode)
+		return err
+	}
 
 	out, err := os.Create(destination)
 	if err != nil {

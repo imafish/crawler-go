@@ -15,7 +15,9 @@
             },
             "args": [
                 "-c",
-                "resources/example.yaml"
+                "resources/example.yaml",
+                "-d",
+                "/home/imafish/tmp/crawler-go"
             ]
         }
     ]

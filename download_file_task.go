@@ -39,8 +39,8 @@ func (t DownloadFileTask) Execute(ctx *Context) error {
 		return err
 	}
 
-	dir := makeAbs(ctx.outDir, dirFormatted)
-	os.MkdirAll(dir, os.ModePerm)
+	dirFormatted = makeAbs(ctx.outDir, dirFormatted)
+	os.MkdirAll(dirFormatted, os.ModePerm)
 	fullPath := filepath.Join(dirFormatted, filenameFormatted)
 	ctx.log.Debugf("got full path: %s", fullPath)
 

@@ -6,11 +6,13 @@
 3. ~~page encoding handling~~
    1. handle unrecognized character
    2. encoding is considered the same accross a group, consider change this
-4. logging
-5. refactoring
+4. front-end rendering
+5. conditional rules
+6. logging
+7. refactoring
    1. manage exported/unexported symbols
    2. namings
    3. create necessary folders
-6. retry
-7. reports
-8. grab and format text from page
+8. retry
+9. reports
+10. grab and format text from page

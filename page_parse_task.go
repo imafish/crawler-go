@@ -51,6 +51,11 @@ func (t PageParseTask) Execute(ctx *Context) error {
 	rules := ctx.config.Rules
 
 	for _, r := range rules {
+		// skip rule if only process link action and start group action present, and 'Final' is true,
+		if r.Action.DownloadFile == nil && t.final {
+			continue
+		}
+
 		for _, tgt := range r.Targets {
 			matchingNodes, err := getMatchingNodes(doc, tgt)
 			if err != nil {

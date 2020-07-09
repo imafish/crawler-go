@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/antchfx/htmlquery"
+	iconv "github.com/djimenez/iconv-go"
 	"golang.org/x/net/html"
 )
 
@@ -27,14 +29,38 @@ func (t PageParseTask) Execute(ctx *Context) error {
 		ctx.log.Errorf("failed to grab page from url %s, err: %s", t.url, err.Error())
 		return err
 	}
-
-	// analysis page content
 	doc, err := htmlquery.Parse(reader)
-
-	pageTitleNode := htmlquery.FindOne(doc, `/html/head/title`)
-	pageTitle := htmlquery.InnerText(pageTitleNode)
+	if err != nil {
+		ctx.log.Errorf("failed to parse page content. err: %s", err.Error())
+		return err
+	}
 
 	if t.gc.firstParse {
+		// get page encoding and initialize converter
+		var converter *iconv.Converter
+		meta := htmlquery.FindOne(doc, `/html/head/meta`)
+		if meta != nil {
+			encoding := ""
+			encodingString := htmlquery.SelectAttr(meta, "content")
+			reg := regexp.MustCompile(`charset=(\w+)`)
+			matches := reg.FindStringSubmatch(encodingString)
+			if len(matches) == 2 {
+				encoding = matches[1]
+			}
+
+			if encoding != "" && encoding != "utf-8" {
+				converter, err = iconv.NewConverter(encoding, "utf-8")
+				if err != nil {
+					ctx.log.Errorf("failed to create encoding converter from %s. err: %s", encoding, err.Error())
+					return err
+				}
+			}
+		}
+		t.gc.converter = converter
+
+		// dir formatting for group context
+		pageTitle := getPageTitle(doc)
+		pageTitle = cc(pageTitle, converter)
 		nc := &namingContext{
 			i:         t.gc.i,
 			pageTitle: pageTitle,
@@ -45,6 +71,8 @@ func (t PageParseTask) Execute(ctx *Context) error {
 			return err
 		}
 		t.gc.dir = dir
+
+		ctx.log.Debugf("generated group context: %#v", t.gc)
 		t.gc.firstParse = false
 	}
 
@@ -76,17 +104,10 @@ func (t PageParseTask) Execute(ctx *Context) error {
 						return err
 					}
 
-					ext, err := getExtension(urlString)
+					nc, err := createNamingContext(urlString, t, doc, n)
 					if err != nil {
-						ctx.log.Errorf("Cannot parse url in download file task, err: %s", err.Error())
+						ctx.log.Errorf("failed to create naming context. err: %s", err.Error())
 						return err
-					}
-					nc := &namingContext{
-						pageTitle: pageTitle,
-						imgAlt:    htmlquery.SelectAttr(n, "alt"),
-						text:      htmlquery.InnerText(n),
-						ext:       ext,
-						i:         t.gc.i,
 					}
 
 					task := DownloadFileTask{
@@ -174,4 +195,53 @@ func isInvalid(url string) bool {
 	}
 
 	return invalid
+}
+
+func getPageTitle(doc *html.Node) string {
+	pageTitle := ""
+	pageTitleNode := htmlquery.FindOne(doc, `/html/head/title`)
+	if pageTitleNode != nil {
+		pageTitle = htmlquery.InnerText(pageTitleNode)
+	}
+
+	return pageTitle
+}
+
+func cc(in string, converter *iconv.Converter) string {
+	str := in
+	if converter != nil {
+		var err error
+		str, err = converter.ConvertString(in)
+		if err != nil {
+			str = in
+		}
+	}
+
+	return str
+}
+
+func createNamingContext(url string, t PageParseTask, doc, n *html.Node) (*namingContext, error) {
+	ext, err := getExtension(url)
+	if err != nil {
+		return nil, err
+	}
+
+	pageTitle := getPageTitle(doc)
+	pageTitle = cc(pageTitle, t.gc.converter)
+
+	imgAlt := htmlquery.SelectAttr(n, "alt")
+	imgAlt = cc(pageTitle, t.gc.converter)
+
+	text := htmlquery.InnerText(n)
+	text = cc(pageTitle, t.gc.converter)
+
+	nc := &namingContext{
+		pageTitle: pageTitle,
+		imgAlt:    imgAlt,
+		text:      text,
+		ext:       ext,
+		i:         t.gc.i,
+	}
+
+	return nc, nil
 }

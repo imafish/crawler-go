@@ -37,15 +37,24 @@ func initLog(logPath string) {
 		switch runtime.GOOS {
 		case "windows":
 			dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
-			logPath = path.Join(dir, "log.log")
+			logPath = path.Join(dir, logPath)
 		case "linux":
-			logPath = "/etc/var/log/"
+			logPath = path.Join("/etc/var/log/", logPath)
 		default:
 		}
 	}
 
 	// TODO implement log
-	logGlobal = ConsoleLog(1)
+	writer, err := os.Create(logPath)
+	if err != nil {
+		writer = nil
+	}
+	logGlobal = ConsoleLog{
+		w: writer,
+	}
+	if err != nil {
+		logGlobal.Warningf("Failed to create log file: %s. err: %s", logPath, err.Error())
+	}
 }
 
 // TODO (@imafish) move to separate file?

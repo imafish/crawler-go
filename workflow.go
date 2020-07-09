@@ -25,6 +25,7 @@ func workflow(rulePath string, outDir string, concurrent int, log Logger) {
 		linkMap:      make(map[string]bool),
 		pendingCount: 0,
 	}
+	log.Debugf("context: %#v", context)
 
 	// first look for targets with URL, they'll act as starter for the crawler
 	gotTask := false

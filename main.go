@@ -15,8 +15,8 @@ var logGlobal Logger
 func main() {
 	configFile := flag.String("c", "", "Manditory: path to the configuration yaml file")
 	outDir := flag.String("d", ".", "output directory for downloaded resources")
-	concurrent := flag.Int("-concurrent", 5, "concurrent count")
-	logPath := flag.String("-log", "out.log", "log file path")
+	concurrent := flag.Int("-p", 5, "concurrent count")
+	logPath := flag.String("-l", "out.log", "log file path")
 	flag.Parse()
 	if *configFile == "" {
 		usage()

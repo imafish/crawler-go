@@ -14,7 +14,7 @@ func workflow(rulePath string, outDir string, concurrent int, log Logger) {
 
 	// initialize context
 	context := &Context{
-		taskChan: make(chan Task, 4096),
+		taskChan: make(chan Task, 2048*concurrent),
 		quitChan: make(chan bool, concurrent),
 
 		goroutineCount: concurrent,

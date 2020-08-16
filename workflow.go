@@ -4,86 +4,68 @@ package main
 // outDir: absolute directory as base dir for output
 // concurrent: number of goroutines to handle crawling
 // log: logger
-func workflow(rulePath string, outDir string, concurrent int, log Logger) {
+func workflow(rulePath string, outDir string, concurrent int) {
 
-	configuration, err := createConfigurationFromYaml(rulePath)
+	config, err := createConfigurationFromYaml(rulePath)
 	if err != nil {
-		log.Errorf("Failed to load rules from file %s. err: %s", rulePath, err.Error())
+		GetLogger().Errorf("Failed to load rules from file %s. err: %s", rulePath, err.Error())
 		return
 	}
 
 	// initialize context
-	context := &Context{
+	context := &ExecutionContext{
 		taskChan: make(chan Task, 2048*concurrent),
 		quitChan: make(chan bool, concurrent),
 
+		baseDir:        outDir,
+		config:         config,
 		goroutineCount: concurrent,
-		outDir:         outDir,
-		config:         configuration,
 
-		log:          log,
 		linkMap:      make(map[string]bool),
 		pendingCount: 0,
 	}
-	log.Debugf("context: %#v", context)
+	GetLogger().Debugf("context: %#v", context)
 
 	// first look for targets with URL, they'll act as starter for the crawler
 	gotTask := false
-	for _, s := range configuration.Starters {
-		for _, t := range s.Targets {
-			start(t, s.StartGroup, context)
-			gotTask = true
+	for _, s := range config.Startpages {
+		task := PageParseTask{
+			url:         s.URL,
+			final:       false,
+			newGroup:    true,
+			groupFormat: &s.Group,
+			taskContext: &TaskContext{},
 		}
+		context.AddTask(task)
+		gotTask = true
 	}
 
 	if !gotTask {
-		log.Warning("No task is found in the rule file.")
+		GetLogger().Warning("No startpage entry is found in the config file.")
 		return
 	}
 
-	context.log.Debugf("starting %d goroutines", concurrent)
+	GetLogger().Debugf("starting %d goroutines", concurrent)
 	for i := 0; i < concurrent; i++ {
-		go ruleExecutionFunc(context)
+		go workerFunc(context)
 	}
 
 	context.wait.Add(concurrent)
-	context.log.Debugf("waiting goroutines to complete")
+	GetLogger().Debugf("waiting %d goroutines to complete", concurrent)
 	context.wait.Wait()
 }
 
-func ruleExecutionFunc(ctx *Context) {
+func workerFunc(ctx *ExecutionContext) {
 	defer ctx.wait.Done()
 
 	for {
 		select {
 		case task := <-ctx.taskChan:
-			err := task.Execute(ctx)
-			ctx.finishExecuting()
-			if err != nil {
-				ctx.log.Errorf("Failed to execute task, err: %s", err.Error())
-			}
+			ctx.ExecuteTask(task)
 
 		case <-ctx.quitChan:
-			ctx.log.Info("worker goroutine quited.")
+			GetLogger().Info("worker goroutine quited.")
 			return
 		}
 	}
-}
-
-func start(url string, g *startGroupAction, ctx *Context) {
-	ct := newCounter()
-
-	task := PageParseTask{
-		url:   url,
-		final: false,
-
-		gc: groupContext{
-			i:          ct,
-			dir:        g.DirPattern,
-			name:       g.GroupName,
-			firstParse: true,
-		},
-	}
-
-	ctx.addTask(task)
 }

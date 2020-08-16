@@ -1,0 +1,73 @@
+startpages:
+    -   URL: "google.com"
+        group:
+            dir_pattern: {startpage.pageTitle}
+            group_by: {startpage.pageTitle}
+    -   URL: "bing.com"
+        group:
+            dir_pattern: {startpage.pageTitle}
+            group_by: {startpage.pageTitle}
+
+rules:
+    -   name: google
+        config:
+            webdriver: stateless
+        matches:
+            -   URL: https://google.com
+            -   URL: *.google.com
+                title: Google Search
+        actions:
+            -   targets:
+                -   xpath: //div/blog
+                -   xpath: //div/blog2
+                download_file:
+                    target:
+                        xpath: "@src"
+                    dir_pattern: ""
+                    filename_pattern: "{__i}{.ext}"
+                    filters:
+                        -   filesize: "> 100KB"
+                        -   imagesize: "> 300x200"
+            -   targets:
+                -   xpath: //other/tags
+                process_link:
+                    target:
+                        xpath: "@src"
+                    new_group: false
+                    final: true
+            -   targets:
+                -   xpath: //new/group/tag
+                process_link:
+                    target:
+                        xpath: "@src"
+                    new_group: true
+                    group:
+                        dir_pattern: {startpage.pageTitle}
+                        group_by: {startpage.pageTitle}
+                    final: false
+        post_actions:
+            -   zip:
+                    filename: "{startpage.pageTitle}.zip"
+                    remove_original: true
+                    include_dir: false
+    -   name: novel
+        config:
+            webdriver: stateless
+        matches:
+            -   URL: blogger.com
+        context:
+            dir_pattern: {startpage.pageTitle}
+            group_by: {startpage.pageTitle}
+        actions:
+            -   targets:
+                -   xpath: //content
+                grab_text:
+                    target:
+                        xpath: "@content"
+                    dir_pattern: ""
+                    filename_pattern: "{linktext}"
+        post_actions:
+            -   join:
+                    filename: "{startpage.pageTitle}.txt"
+                    remove_original: true
+                    join_text: "\n\n\n"

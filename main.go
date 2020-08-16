@@ -12,24 +12,29 @@ import (
 // Log is the global logger
 var logGlobal Logger
 
+// GetLogger returns global unique logger
+func GetLogger() Logger {
+	return logGlobal
+}
+
 func main() {
 	configFile := flag.String("c", "", "Manditory: path to the configuration yaml file")
 	outDir := flag.String("d", ".", "output directory for downloaded resources")
 	concurrent := flag.Int("-p", 5, "concurrent count")
-	logPath := flag.String("-l", "out.log", "log file path")
+	logPath := flag.String("-l", "log.log", "log file path")
 	flag.Parse()
-	if *configFile == "" {
+	if _, err := os.Stat(*configFile); os.IsNotExist(err) {
 		usage()
 		os.Exit(1)
 	}
 
 	initLog(*logPath)
 
-	logGlobal.Info("starting crawler workflow...")
+	GetLogger().Info("starting crawler workflow...")
 	absDir := makeAbs(filepath.Dir(os.Args[0]), *outDir)
-	workflow(*configFile, absDir, *concurrent, logGlobal)
+	workflow(*configFile, absDir, *concurrent)
 
-	logGlobal.Info("ALL DONE.")
+	GetLogger().Info("ALL DONE.")
 }
 
 func initLog(logPath string) {
@@ -49,7 +54,7 @@ func initLog(logPath string) {
 	if err != nil {
 		writer = nil
 	}
-	logGlobal = ConsoleLog{
+	logGlobal = &ConsoleLog{
 		w: writer,
 	}
 	if err != nil {

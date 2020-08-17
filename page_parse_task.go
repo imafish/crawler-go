@@ -76,7 +76,7 @@ func (t PageParseTask) Execute(ctx *ExecutionContext) error {
 				matchingNodes = append(matchingNodes, m...)
 			}
 
-			// TODO @imafish refactor this code, perhaps using Action interfaces.
+			// TODO @imafish refactor this code
 			for _, n := range matchingNodes {
 				GetLogger().Debugf("Processing a matching node: %v", n)
 
@@ -88,7 +88,7 @@ func (t PageParseTask) Execute(ctx *ExecutionContext) error {
 					}
 					taskContext, err := t.createTaskContext(url, n, converter)
 					if err != nil {
-						GetLogger().Warning("Error when trying to create task context, node: %v", n)
+						GetLogger().Warningf("Error when trying to create task context, node: %v", n)
 						continue
 					}
 
@@ -101,6 +101,21 @@ func (t PageParseTask) Execute(ctx *ExecutionContext) error {
 					ctx.AddTask(task)
 
 				} else if gt := a.GrabText; gt != nil {
+					url := t.url
+					taskContext, err := t.createTaskContext(url, n, converter)
+					if err != nil {
+						GetLogger().Warningf("Error when trying to create task context, node: %v", n)
+						continue
+					}
+
+					task := GrabTextTask{
+						taskContext:     taskContext,
+						node:            n,
+						dirPattern:      gt.DirPattern,
+						filenamePattern: gt.FilenamePattern,
+						target:          gt.Target,
+					}
+					ctx.AddTask(task)
 
 				} else if pl := a.ProcessLink; pl != nil {
 					url, err := t.getURL(n, pl.Target)

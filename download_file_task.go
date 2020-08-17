@@ -27,12 +27,8 @@ func (t DownloadFileTask) Execute(ctx *ExecutionContext) error {
 	filenameFormatted := FormatString(t.filenamePattern, t.taskContext)
 
 	groupContext := ctx.FindOrNewGroupContext(t.taskContext, false, nil)
-	if groupContext != nil {
-		t.taskContext.counter = groupContext.counter
-		dirFormatted = filepath.Join(makeAbs(ctx.baseDir, groupContext.dir), dirFormatted)
-	} else {
-		dirFormatted = makeAbs(ctx.baseDir, dirFormatted)
-	}
+	t.taskContext.counter = groupContext.counter
+	dirFormatted = filepath.Join(makeAbs(ctx.baseDir, groupContext.dir), dirFormatted)
 
 	os.MkdirAll(dirFormatted, os.ModePerm)
 	fullPath := filepath.Join(dirFormatted, filenameFormatted)

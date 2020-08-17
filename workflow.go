@@ -14,15 +14,17 @@ func workflow(rulePath string, outDir string, concurrent int) {
 
 	// initialize context
 	context := &ExecutionContext{
-		taskChan: make(chan Task, 2048*concurrent),
-		quitChan: make(chan bool, concurrent),
-
+		taskChan:       make(chan Task, 2048*concurrent),
+		quitChan:       make(chan bool, concurrent),
 		baseDir:        outDir,
 		config:         config,
 		goroutineCount: concurrent,
-
-		linkMap:      make(map[string]bool),
-		pendingCount: 0,
+		groups:         make([]*GroupContext, 0),
+		linkMap:        make(map[string]bool),
+		pendingCount:   0,
+		defaultGroup: &GroupContext{
+			counter: newCounter(),
+		},
 	}
 	GetLogger().Debugf("context: %#v", context)
 

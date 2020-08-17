@@ -34,6 +34,11 @@ func newCounter() *counter {
 	return ct
 }
 
-func (ct *counter) close() {
+func (ct *counter) Close() {
 	ct.cc <- 0
+}
+
+func (ct *counter) GetCount() int {
+	i := <-ct.i
+	return i
 }

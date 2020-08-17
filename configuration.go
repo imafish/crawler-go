@@ -7,46 +7,88 @@ import (
 )
 
 type configuration struct {
-	Starters []starter
-	Rules    []rule
+	Startpages []startpage
+	Rules      []Rule
 }
 
-type starter struct {
-	Targets    []string
-	StartGroup *startGroupAction `yaml:"start_group"`
+type startpage struct {
+	URL   string
+	Group group
 }
 
-type rule struct {
-	Targets []target
-	Action  *action
+type group struct {
+	DirPattern string `yaml:"dir_pattern"`
+	GroupBy    string `yaml:"group_by"`
 }
 
-type target struct {
-	URL   string `yaml:"url,omitempty"`
-	Xpath string `yaml:"xpath,omitempty"`
+// Rule represents an execution rule
+type Rule struct {
+	Name        string
+	Config      config
+	Matches     []match
+	Actions     []action
+	PostActions []postAction `yaml:"post_actions"`
+}
+
+type config struct {
+	Webdriver string
+}
+
+type match struct {
+	URL   string
+	Title string
 }
 
 type action struct {
+	Targets      []target
 	DownloadFile *downloadFileAction `yaml:"download_file,omitempty"`
-	StartGroup   *startGroupAction   `yaml:"start_group,omitempty"`
+	GrabText     *grabTextAction     `yaml:"grab_text,omitempty"`
 	ProcessLink  *processLinkAction  `yaml:"process_link,omitempty"`
+}
+
+type target struct {
+	Xpath string `yaml:"xpath,omitempty"`
 }
 
 type downloadFileAction struct {
 	Target          target
 	DirPattern      string `yaml:"dir_pattern"`
 	FilenamePattern string `yaml:"filename_pattern"`
-}
-
-type startGroupAction struct {
-	DirPattern   string `yaml:"dir_pattern"`
-	GroupName    string `yaml:"group_name"`
-	ResetCounter bool   `yaml:"reset_counter"`
+	Filters         []filter
 }
 
 type processLinkAction struct {
-	Target target
-	Final  bool
+	Target   target
+	Final    bool
+	NewGroup bool   `yaml:"new_group"`
+	Group    *group `yaml:"group,omitempty"`
+}
+
+type grabTextAction struct {
+	Target          target
+	DirPattern      string `yaml:"dir_pattern"`
+	FilenamePattern string `yaml:"filename_pattern"`
+}
+
+type filter struct {
+	filesize string `yaml:"filesize,omitempty"`
+}
+
+type postAction struct {
+	Join *join `yaml:"join,omitempty"`
+	Zip  *zip  `yaml:"zip,omitempty"`
+}
+
+type join struct {
+	filename       string
+	removeOriginal bool   `yaml:"remove_original"`
+	joinText       string `yaml:"join_text,omitempty"`
+}
+
+type zip struct {
+	filename       string
+	removeOriginal bool `yaml:"remove_original"`
+	includeDir     bool `yaml:"include_dir"`
 }
 
 func createConfigurationFromYaml(ymlPath string) (*configuration, error) {

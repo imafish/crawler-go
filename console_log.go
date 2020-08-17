@@ -11,7 +11,7 @@ type ConsoleLog struct {
 }
 
 // Tracef trace level log
-func (c ConsoleLog) Tracef(format string, a ...interface{}) (n int, err error) {
+func (c *ConsoleLog) Tracef(format string, a ...interface{}) (n int, err error) {
 	if c.w != nil {
 		fmt.Fprintf(c.w, format+"\n", a...)
 	}
@@ -19,7 +19,7 @@ func (c ConsoleLog) Tracef(format string, a ...interface{}) (n int, err error) {
 }
 
 // Debugf trace level log
-func (c ConsoleLog) Debugf(format string, a ...interface{}) (n int, err error) {
+func (c *ConsoleLog) Debugf(format string, a ...interface{}) (n int, err error) {
 	if c.w != nil {
 		fmt.Fprintf(c.w, format+"\n", a...)
 	}
@@ -28,7 +28,7 @@ func (c ConsoleLog) Debugf(format string, a ...interface{}) (n int, err error) {
 }
 
 // Infof trace level log
-func (c ConsoleLog) Infof(format string, a ...interface{}) (n int, err error) {
+func (c *ConsoleLog) Infof(format string, a ...interface{}) (n int, err error) {
 	if c.w != nil {
 		fmt.Fprintf(c.w, format+"\n", a...)
 	}
@@ -37,7 +37,7 @@ func (c ConsoleLog) Infof(format string, a ...interface{}) (n int, err error) {
 }
 
 // Warningf trace level log
-func (c ConsoleLog) Warningf(format string, a ...interface{}) (n int, err error) {
+func (c *ConsoleLog) Warningf(format string, a ...interface{}) (n int, err error) {
 	if c.w != nil {
 		fmt.Fprintf(c.w, format+"\n", a...)
 	}
@@ -46,7 +46,7 @@ func (c ConsoleLog) Warningf(format string, a ...interface{}) (n int, err error)
 }
 
 // Errorf trace level log
-func (c ConsoleLog) Errorf(format string, a ...interface{}) (n int, err error) {
+func (c *ConsoleLog) Errorf(format string, a ...interface{}) (n int, err error) {
 	if c.w != nil {
 		fmt.Fprintf(c.w, format+"\n", a...)
 	}
@@ -55,7 +55,7 @@ func (c ConsoleLog) Errorf(format string, a ...interface{}) (n int, err error) {
 }
 
 // Fatalf trace level log
-func (c ConsoleLog) Fatalf(format string, a ...interface{}) (n int, err error) {
+func (c *ConsoleLog) Fatalf(format string, a ...interface{}) (n int, err error) {
 	if c.w != nil {
 		fmt.Fprintf(c.w, format+"\n", a...)
 	}
@@ -64,7 +64,7 @@ func (c ConsoleLog) Fatalf(format string, a ...interface{}) (n int, err error) {
 }
 
 // Trace trace level log
-func (c ConsoleLog) Trace(a ...interface{}) (n int, err error) {
+func (c *ConsoleLog) Trace(a ...interface{}) (n int, err error) {
 	if c.w != nil {
 		fmt.Fprintln(c.w, a...)
 	}
@@ -72,7 +72,7 @@ func (c ConsoleLog) Trace(a ...interface{}) (n int, err error) {
 }
 
 // Debug trace level log
-func (c ConsoleLog) Debug(a ...interface{}) (n int, err error) {
+func (c *ConsoleLog) Debug(a ...interface{}) (n int, err error) {
 	if c.w != nil {
 		fmt.Fprintln(c.w, a...)
 	}
@@ -80,7 +80,7 @@ func (c ConsoleLog) Debug(a ...interface{}) (n int, err error) {
 }
 
 // Info trace level log
-func (c ConsoleLog) Info(a ...interface{}) (n int, err error) {
+func (c *ConsoleLog) Info(a ...interface{}) (n int, err error) {
 	if c.w != nil {
 		fmt.Fprintln(c.w, a...)
 	}
@@ -88,7 +88,7 @@ func (c ConsoleLog) Info(a ...interface{}) (n int, err error) {
 }
 
 // Warning trace level log
-func (c ConsoleLog) Warning(a ...interface{}) (n int, err error) {
+func (c *ConsoleLog) Warning(a ...interface{}) (n int, err error) {
 	if c.w != nil {
 		fmt.Fprintln(c.w, a...)
 	}
@@ -96,7 +96,7 @@ func (c ConsoleLog) Warning(a ...interface{}) (n int, err error) {
 }
 
 // Error trace level log
-func (c ConsoleLog) Error(a ...interface{}) (n int, err error) {
+func (c *ConsoleLog) Error(a ...interface{}) (n int, err error) {
 	if c.w != nil {
 		fmt.Fprintln(c.w, a...)
 	}
@@ -104,7 +104,7 @@ func (c ConsoleLog) Error(a ...interface{}) (n int, err error) {
 }
 
 // Fatal trace level log
-func (c ConsoleLog) Fatal(a ...interface{}) (n int, err error) {
+func (c *ConsoleLog) Fatal(a ...interface{}) (n int, err error) {
 	if c.w != nil {
 		fmt.Fprintln(c.w, a...)
 	}
@@ -112,6 +112,6 @@ func (c ConsoleLog) Fatal(a ...interface{}) (n int, err error) {
 }
 
 // SetPrefix trace level log
-func (c ConsoleLog) SetPrefix(prefix string) error {
+func (c *ConsoleLog) SetPrefix(prefix string) error {
 	return nil
 }

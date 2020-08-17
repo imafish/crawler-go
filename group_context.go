@@ -1,11 +1,16 @@
 package main
 
-import iconv "github.com/djimenez/iconv-go"
+// GroupContext represents a group of tasks that has similar properties.
+type GroupContext struct {
+	groupBy string
 
-type groupContext struct {
-	i          *counter
-	dir        string
-	name       string
-	firstParse bool
-	converter  *iconv.Converter
+	name    string
+	counter *counter
+	dir     string
+}
+
+// IsMatch returns if given task context is a match to a group context
+func (g GroupContext) IsMatch(taskContext *TaskContext) bool {
+	match := g.name == FormatString(g.groupBy, taskContext)
+	return match
 }

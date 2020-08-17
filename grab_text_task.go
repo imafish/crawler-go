@@ -38,18 +38,23 @@ func (t GrabTextTask) Execute(ctx *ExecutionContext) error {
 	fullPath := filepath.Join(dirFormatted, filenameFormatted)
 	GetLogger().Debugf("got full path: %s", fullPath)
 
-	targetNode, err := GetMatchingNodes(t.node, t.target)
-	if err != nil {
-		GetLogger().Errorf("Error getting matching target node, error: %s", err.Error())
-		return err
-	}
-	if len(targetNode) != 1 {
-		err = fmt.Errorf("couldn't find exact one matching inner node for task %s", t.URL())
-		GetLogger().Error(err.Error())
-		return err
+	matchingNode := t.node
+	// TODO: @imafish here assumed that target can only has Xpath field. When adding more types of matching mechanisms, this code has to change.
+	if t.target.Xpath != "" {
+		matchingNodes, err := GetMatchingNodes(t.node, t.target)
+		if err != nil {
+			GetLogger().Errorf("Error getting matching target node, error: %s", err.Error())
+			return err
+		}
+		if len(matchingNodes) != 1 {
+			err = fmt.Errorf("couldn't find exact one matching inner node for task %s", t.URL())
+			GetLogger().Error(err.Error())
+			return err
+		}
+		matchingNode = matchingNodes[0]
 	}
 
-	text := CollectText(targetNode[0], t.converter)
+	text := CollectText(matchingNode, t.converter)
 	f, err := os.Create(fullPath)
 	if err != nil {
 		GetLogger().Errorf("Error creating text file %s, error: %s", fullPath, err.Error())

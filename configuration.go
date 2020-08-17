@@ -12,7 +12,7 @@ type configuration struct {
 }
 
 type startpage struct {
-	URL   string
+	URL   string `yaml:"URL"`
 	Group group
 }
 
@@ -35,7 +35,7 @@ type config struct {
 }
 
 type match struct {
-	URL   string
+	URL   string `yaml:"URL"`
 	Title string
 }
 

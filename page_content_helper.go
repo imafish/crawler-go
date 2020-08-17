@@ -27,14 +27,14 @@ func GetPageTitle(doc *html.Node, converter *iconv.Converter) string {
 // It returns empty string if charset property doesnot exist.
 func GetPageEncoding(doc *html.Node) string {
 	encoding := ""
-	meta := htmlquery.FindOne(doc, `/html/head/meta`)
-	if meta != nil {
-
+	metas := htmlquery.Find(doc, `/html/head/meta`)
+	for _, meta := range metas {
 		encodingString := htmlquery.SelectAttr(meta, "content")
 		reg := regexp.MustCompile(`charset=(\w+)`)
 		matches := reg.FindStringSubmatch(encodingString)
 		if len(matches) == 2 {
 			encoding = matches[1]
+			break
 		}
 	}
 

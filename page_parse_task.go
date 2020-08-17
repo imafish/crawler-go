@@ -55,9 +55,7 @@ func (t PageParseTask) Execute(ctx *ExecutionContext) error {
 	}
 
 	groupContext := ctx.FindOrNewGroupContext(t.taskContext, t.newGroup, t.groupFormat)
-	if groupContext != nil {
-		t.taskContext.counter = groupContext.counter
-	}
+	t.taskContext.counter = groupContext.counter
 
 	matchingRules := ctx.FindMatchingRules(t.taskContext)
 
@@ -86,7 +84,7 @@ func (t PageParseTask) Execute(ctx *ExecutionContext) error {
 						GetLogger().Warningf("Failed to get URL (target) from node %v", n)
 						continue
 					}
-					taskContext, err := t.createTaskContext(url, n, converter)
+					taskContext, err := t.createTaskContextFromLink(url, n, converter)
 					if err != nil {
 						GetLogger().Warningf("Error when trying to create task context, node: %v", n)
 						continue
@@ -102,7 +100,7 @@ func (t PageParseTask) Execute(ctx *ExecutionContext) error {
 
 				} else if gt := a.GrabText; gt != nil {
 					url := t.url
-					taskContext, err := t.createTaskContext(url, n, converter)
+					taskContext, err := t.createTaskContextFromNode(url, n, t.taskContext.linkText, converter)
 					if err != nil {
 						GetLogger().Warningf("Error when trying to create task context, node: %v", n)
 						continue
@@ -114,6 +112,8 @@ func (t PageParseTask) Execute(ctx *ExecutionContext) error {
 						dirPattern:      gt.DirPattern,
 						filenamePattern: gt.FilenamePattern,
 						target:          gt.Target,
+						url:             url,
+						converter:       converter,
 					}
 					ctx.AddTask(task)
 
@@ -124,7 +124,7 @@ func (t PageParseTask) Execute(ctx *ExecutionContext) error {
 						continue
 					}
 
-					taskContext, err := t.createTaskContext(url, n, converter)
+					taskContext, err := t.createTaskContextFromLink(url, n, converter)
 					if err != nil {
 						GetLogger().Warning("Error when trying to create task context, node: %v", n)
 						continue
@@ -213,7 +213,7 @@ func cc(in string, converter *iconv.Converter) string {
 	return str
 }
 
-func (t PageParseTask) createTaskContext(url string, n *html.Node, converter *iconv.Converter) (*TaskContext, error) {
+func (t PageParseTask) createTaskContextFromLink(url string, n *html.Node, converter *iconv.Converter) (*TaskContext, error) {
 	imgAlt := htmlquery.SelectAttr(n, "alt")
 	imgAlt = cc(imgAlt, converter)
 
@@ -229,6 +229,30 @@ func (t PageParseTask) createTaskContext(url string, n *html.Node, converter *ic
 		pageTitle:      t.taskContext.pageTitle,
 		linkURL:        url,
 		linkText:       CollectText(n, converter),
+		imgAlt:         imgAlt,
+		extension:      ext,
+		counter:        t.taskContext.counter,
+	}
+
+	return taskContext, nil
+}
+
+func (t PageParseTask) createTaskContextFromNode(url string, n *html.Node, linkText string, converter *iconv.Converter) (*TaskContext, error) {
+	imgAlt := htmlquery.SelectAttr(n, "alt")
+	imgAlt = cc(imgAlt, converter)
+
+	ext, err := GetExtension(url)
+	if err != nil {
+		GetLogger().Warningf("Error in getting extension from URL: %s, error is %s", url, err.Error())
+	}
+
+	taskContext := &TaskContext{
+		startPageURL:   t.taskContext.startPageURL,
+		startPageTitle: t.taskContext.startPageTitle,
+		pageURL:        t.taskContext.pageURL,
+		pageTitle:      t.taskContext.pageTitle,
+		linkURL:        url,
+		linkText:       linkText,
 		imgAlt:         imgAlt,
 		extension:      ext,
 		counter:        t.taskContext.counter,

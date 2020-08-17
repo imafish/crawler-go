@@ -89,6 +89,7 @@ func (ctx *ExecutionContext) FindOrNewGroupContext(taskContext *TaskContext, cre
 			counter: newCounter(),
 			dir:     filepath.Join(ctx.baseDir, FormatString(groupFormat.DirPattern, taskContext)),
 		}
+		ctx.groups = append(ctx.groups, group)
 	}
 
 	if group == nil {

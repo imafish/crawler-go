@@ -30,7 +30,7 @@ func GetPageEncoding(doc *html.Node) string {
 	metas := htmlquery.Find(doc, `/html/head/meta`)
 	for _, meta := range metas {
 		encodingString := htmlquery.SelectAttr(meta, "content")
-		reg := regexp.MustCompile(`charset=(\w+)`)
+		reg := regexp.MustCompile(`charset=([^;"]+)`)
 		matches := reg.FindStringSubmatch(encodingString)
 		if len(matches) == 2 {
 			encoding = matches[1]
